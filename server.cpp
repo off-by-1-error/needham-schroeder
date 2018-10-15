@@ -16,6 +16,8 @@
 #include<vector>
 #include<cstring>
 
+#include"InfInt.h"
+
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
@@ -28,6 +30,7 @@ class User {
         std::string address_string;
         uint32_t address_int;
         uint16_t port;
+        bool is_online;
 
         User();
         void print();
@@ -42,6 +45,7 @@ User::User() {
     fd = -1;
     address_string = "";
     address_int = 0;
+    is_online = true;
 }
 
 void User::print() {
@@ -51,6 +55,7 @@ void User::print() {
     std::cout << "Address int: " << address_int << std::endl;
     std::cout << "Port: " << port << std::endl;
     std::cout << "key: " << key << std::endl;
+    std::cout << "is_online: " << is_online << std::endl;
 }
 
 bool isprime(int n) {
@@ -66,19 +71,43 @@ bool isprime(int n) {
     return true;
 }
 
-void get_primitive_roots(int n, std::vector<int>& list) {
+
+int gcd(InfInt n1, InfInt n2) {}
+
+InfInt power(int base, int exponent) {
+    int i = 0;
+    InfInt result = base;
+
+    
+    while(i < exponent) {
+        //std::cout << "result: " << result << std::endl;
+        result = result * base;
+        i++;
+    }
+
+    //std::cout << base << "^" << exponent << " = " << result << std::endl;
+
+    return result;
+}
+
+int get_primitive_roots(int n) {
     int hits[n] = {0};
-    unsigned long long result;
+    InfInt result = 0;
+
+    result = -1;
+
+    std::cout << "generating primitive root..." << std::endl;
 
     for(int i = 1; i < n; i++) {
-        std::cout << "outer loop" << std::endl;
+        //std::cout << "outer loop" << std::endl;
         memset(hits, 0, (n-1)*sizeof(int));
         for(int j = 1; j <= n; j++) {
-            result = (unsigned long long) pow((float)i, (float)j);
-            std::cout << i << "^" << j << " = " << result << std::endl;
+            //result = (unsigned long long) pow((float)i, (float)j);
+            result = power(i, j);
+            //std::cout << i << "^" << j << " = " << result << std::endl;
             result = result % n;
-            std::cout << i << "^" << j << " % " << n << " = " << result << std::endl;
-            hits[result] += 1;
+            //std::cout << i << "^" << j << " % " << n << " = " << result << std::endl;
+            hits[result.toLongLong()] += 1;
         }
         
         int numZeros = 0;
@@ -87,11 +116,12 @@ void get_primitive_roots(int n, std::vector<int>& list) {
         }
 
         if(numZeros == 0) {
-            list.push_back(i);
+            result = i;
+            break;
         }
     }
-    
 
+    return result.toInt();
 }
 
 int diffie_hellman(User* u) {
@@ -104,11 +134,94 @@ int diffie_hellman(User* u) {
         //std::cout << "r is: " << r << std::endl;
     } while(!isprime(r));
 
+    int root;
+    root = get_primitive_roots(r);
+
+    std::cout << "Prime: " << r << std::endl;
+
+    std::cout << "Primitive root: " << root << std::endl;
+
+    int secret_num = 0;
+    secret_num = (rand() % 500) + 100;
+
+    std::cout << "secret num: " << secret_num << std::endl;
     //std::cout << "The generated prime is: " << r << std::endl;
 
+    char* buf = (char*) calloc(128, sizeof(char));
+    int bytes_read = 0;
 
+    bytes_read = read(u->fd, buf, 128);
+    buf[bytes_read] = '\0';
+
+    std::cout << "read name: " << buf << std::endl;
+    u->name = buf;
+
+
+    sprintf(buf, "%d", r);
+    write(u->fd, buf, strlen(buf));
+    std::cout << "sent prime n to client" << std::endl;
+
+    bytes_read = read(u->fd, buf, 128);
+
+    sprintf(buf, "%d", root);
+    write(u->fd, buf, strlen(buf));
+    std::cout << "sent base a to client" << std::endl;
+
+    InfInt pub = power(root, secret_num);
+    std::cout << "base ^ secret = " << pub << std::endl;
+
+    pub = pub % r;
+    std::cout << "public key is: " << pub << std::endl;
+
+    bytes_read = read(u->fd, buf, 128);
+    buf[bytes_read] = '\0';
+
+    int client_public_key = 0;
+    client_public_key = atoi(buf);
+    std::cout << "got public key " << client_public_key << " from client." << std::endl;
+
+    sprintf(buf, "%d", pub.toInt());
+    write(u->fd, buf, strlen(buf));
+    std::cout << "sent public key to client" << std::endl;
+
+    InfInt secret_key = power(client_public_key, secret_num);
+    secret_key = secret_key % r;
+    std::cout << "established secret key " << secret_key << std::endl;
+
+    u->key = secret_key.toInt();
 
     return 0;
+}
+
+void print_users(User* u) {
+    std::cout << "---USERLIST---" << std::endl;
+    std::cout << std::endl;
+
+    std::string message = "";
+
+    for(int i = 0; i < users.size(); i++) {
+        users[i]->print();
+        std::cout << std::endl;
+
+        if(users[i]->is_online == true) {
+            message = message + std::to_string(i);
+            message = message + ". ";
+            message = message + users[i]->name;
+
+            if(users[i]->fd == u->fd) {
+                message = message + " (you)";
+            }
+            message = message + "\n";
+        }
+    }
+
+    std::cout << std::endl;
+
+    std::cout << message << std::endl;
+    write(u->fd, message.c_str(), strlen(message.c_str()));
+
+    char* buf[5];
+    read(u->fd, buf, 128);
 }
 
 void* user_thread(void* ptr) {
@@ -123,7 +236,7 @@ void* user_thread(void* ptr) {
     int bytes_read = 0;
     
     while(1) {
-        std::string options = "OPTIONS:\n1. Set up private keys\n2. See available users\n3. wait for transmission\n";
+        std::string options = "OPTIONS:\n1. Set up private keys\n2. See available users\n3. wait for transmission\n4. exit\n";
         write(u->fd, options.c_str(), strlen(options.c_str()));
 
 
@@ -134,13 +247,20 @@ void* user_thread(void* ptr) {
 
         if(bytes_read == 0) {
             std::cout << "Child disconnected" << std::endl;
+            u->is_online = false;
             break;
         } else if(select == 1) {
             std::cout << "Option 1!" << std::endl;
+            diffie_hellman(u);
         } else if(select == 2) {
             std::cout << "Option 2!" << std::endl;
+            print_users(u);
         } else if(select == 3) {
             std::cout << "Option 3!" << std::endl;
+        } else if(select == 4) {
+            std::cout << "Option 4! (exit)" << std::endl;
+            u->is_online = false;
+            break;
         } else {
             input = buf;
             std::cout << "Invalid message from client: " << input << std::endl;
@@ -181,8 +301,8 @@ void listen_tcp(uint16_t port) {
     while(1) {
         pthread_t tid;
         int newUserConnection;
-        newUserConnection = accept(sock, (struct sockaddr*)&client_addr, &client_len);
-        //newUserConnection = accept(sock, NULL, NULL);
+        //newUserConnection = accept(sock, (struct sockaddr*)&client_addr, &client_len);
+        newUserConnection = accept(sock, NULL, NULL);
 
         if(newUserConnection < 0) {
             printf("newUserConnection = %d\n", newUserConnection);
@@ -219,19 +339,18 @@ void listen_tcp(uint16_t port) {
     return;
 }
 
+
 int main(int argc, char** argv) {
     srand(time(NULL));
     uint16_t port;
 
-    diffie_hellman(NULL);
+    //diffie_hellman(NULL);
 
-    std::vector<int> list;
-    get_primitive_roots(17, list);
-
-    for(int i = 0; i < list.size(); i++) {
-        std::cout << "list[" << i << "]: " << list[i] << std::endl;
-    }
-
+    int root = -1;
+    //root = get_primitive_roots(1021);
+    
+    //std::cout << "root = " << root << std::endl;
+    
     if(argc != 2) {
         fprintf(stderr, "USAGE: ./server.out [port]\n");
         return EXIT_FAILURE;
