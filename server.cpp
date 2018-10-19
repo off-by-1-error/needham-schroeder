@@ -15,6 +15,7 @@
 #include<string>
 #include<vector>
 #include<cstring>
+#include<fstream>
 
 #include"InfInt.h"
 
@@ -220,8 +221,122 @@ void print_users(User* u) {
     std::cout << message << std::endl;
     write(u->fd, message.c_str(), strlen(message.c_str()));
 
-    char* buf[5];
+    char* buf[128];
     read(u->fd, buf, 128);
+}
+
+
+void send(User* u) {
+    char* buf = (char*) calloc(128, sizeof(char));
+    std::string input;
+
+    int bytes_read = 0;
+
+    bytes_read = read(u->fd, buf, 128);
+    buf[bytes_read] = '\0';
+
+    int recipient_index = atoi(buf);
+
+    if(recipient_index < 0 || recipient_index >= users.size()) {
+        input = "ERROR: invalid user index\n";
+    } else if(users[recipient_index]->fd == u->fd) {
+        input = "ERROR: don't send messages to yourself, you dummy\n";
+    } else if(users[recipient_index]->is_online == false) {
+        input = "ERROR: that user is offline\n";
+    } else {
+        input = "VALID";
+    }
+
+    write(u->fd, input.c_str(), strlen(input.c_str()));
+
+    if(input != "VALID") {
+        return;
+    }
+
+    bytes_read = read(u->fd, buf, 128);
+    buf[bytes_read] = '\0';
+
+    std::cout << "received: " << buf << std::endl;
+
+    input = "";
+    int session_key = (rand() % 1022) + 1;
+
+    
+    char temp[10];
+    std::string temp2;
+    sprintf(temp, "%d", session_key);
+    temp2 = temp;
+
+    input += temp2;
+    input += " ";
+    input += u->address_string;
+    input += " ";
+
+    sprintf(temp, "%d", u->port);
+    temp2 = temp;
+
+    input += temp2;
+
+    std::cout << "Kb{Sk, A} -> " << input << std::endl;
+
+    system("rm data/temp.txt");
+    std::ofstream ofs;
+    ofs.open("data/temp.txt");
+    ofs << input;
+    ofs.close();
+
+    system("rm data/tempcipher.txt");
+    
+    char enc_string[128];
+    sprintf(enc_string, "python des.py data/temp.txt data/tempcipher.txt %d 0", users[recipient_index]->key);
+
+    //std::cout << "enc_string: " << enc_string << std::endl;
+    system(enc_string);
+
+    //make Ka{Na, B, Sk {Sk, A}}
+
+    input = "";
+
+    std::string nonce = buf;
+    nonce = nonce.substr(0, nonce.find_first_of(" "));
+    std::cout << "the nonce is: " << nonce << std::endl;
+
+    input += nonce;
+    input += " ";
+
+    input += users[recipient_index]->address_string;
+    input += " ";
+
+    sprintf(temp, "%d", session_key);
+    temp2 = temp;
+
+    input += temp2;
+    input += " ";
+
+    std::ofstream ofs2;
+    ofs2.open("data/plaintext_envelope.txt");
+    ofs2 << input;
+    ofs2.close();
+
+    system("cat data/plaintext_envelope.txt data/tempcipher.txt > data/big_envelope.txt");
+
+    sprintf(enc_string, "python des.py data/big_envelope.txt data/encrypted_big_envelope.txt %d 0", u->key);
+
+    system(enc_string);
+
+    char encrypted_data[128] = {0};
+
+    std::ifstream ifs;
+    ifs.open("data/encrypted_big_envelope.txt");
+    ifs.getline(encrypted_data, 128);
+    ifs.close();
+
+    std::cout << "Ka{Na, B, Sk, {Sk, A}} is " << encrypted_data << std::endl;
+
+    write(u->fd, encrypted_data, strlen(encrypted_data));
+
+    bytes_read = read(u->fd, buf, 128);
+
 }
 
 void* user_thread(void* ptr) {
@@ -236,7 +351,7 @@ void* user_thread(void* ptr) {
     int bytes_read = 0;
     
     while(1) {
-        std::string options = "OPTIONS:\n1. Set up private keys\n2. See available users\n3. wait for transmission\n4. exit\n";
+        std::string options = "OPTIONS:\n1. Set up private keys\n2. See available users\n3. Send to user\n4. wait for transmission\n5. exit\n";
         write(u->fd, options.c_str(), strlen(options.c_str()));
 
 
@@ -257,8 +372,11 @@ void* user_thread(void* ptr) {
             print_users(u);
         } else if(select == 3) {
             std::cout << "Option 3!" << std::endl;
+            send(u);
         } else if(select == 4) {
-            std::cout << "Option 4! (exit)" << std::endl;
+            std::cout << "Option 4!" << std::endl;
+        } else if(select == 5) {
+            std::cout << "Option 5! (exit)" << std::endl;
             u->is_online = false;
             break;
         } else {

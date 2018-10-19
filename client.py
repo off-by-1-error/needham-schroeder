@@ -60,7 +60,42 @@ def get_userlist() :
     print "---USERLIST---"
     print users
 
+def ns() :
+    user_index = raw_input("Connect to which user?")
 
+    s.send(user_index)
+
+    validation = s.recv(1024)
+
+    if validation != "VALID":
+        print validation
+        return
+    print validation
+
+
+    #generate nonce
+
+    nonce = randint(0, 2147483646)
+
+    addr = socket.gethostbyname(socket.gethostname())
+
+    print addr
+
+    message = ""
+    message += str(nonce)
+    message += " "
+    message += addr
+    message += " "
+    message += str(port)
+    message += "!"
+
+    s.send(message)
+
+    encrypted_data = s.recv(1024)
+
+    s.send("ok")
+
+    print "received data: ", encrypted_data
 
 while True:
     server_message = s.recv(1024)
@@ -74,11 +109,14 @@ while True:
         diffie_hellman()
     elif client_message == "2" :
         print "option 2!"
-        get_userlist();
+        get_userlist()
     elif client_message == "3" :
         print "option 3!"
+        ns()
     elif client_message == "4" :
-        print "option 4! (exit)"
+        print "option 4!"
+    elif client_message == "5" :
+        print "option 5! (exit)"
         break
 
 
