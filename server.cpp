@@ -204,7 +204,7 @@ void print_users(User* u) {
         users[i]->print();
         std::cout << std::endl;
 
-        if(users[i]->is_online == true) {
+//        if(users[i]->is_online == true) {
             message = message + std::to_string(i);
             message = message + ". ";
             message = message + users[i]->name;
@@ -213,7 +213,7 @@ void print_users(User* u) {
                 message = message + " (you)";
             }
             message = message + "\n";
-        }
+//        }
     }
 
     std::cout << std::endl;
@@ -241,8 +241,8 @@ void send(User* u) {
         input = "ERROR: invalid user index\n";
     } else if(users[recipient_index]->fd == u->fd) {
         input = "ERROR: don't send messages to yourself, you dummy\n";
-    } else if(users[recipient_index]->is_online == false) {
-        input = "ERROR: that user is offline\n";
+    //} else if(users[recipient_index]->is_online == false) {
+    //    input = "ERROR: that user is offline\n";
     } else {
         input = "VALID";
     }
@@ -330,6 +330,9 @@ void send(User* u) {
     ifs.open("data/encrypted_big_envelope.txt");
     ifs.getline(encrypted_data, 128);
     ifs.close();
+
+    system("cat data/big_envelope.txt");
+    std::cout << std::endl;
 
     std::cout << "Ka{Na, B, Sk, {Sk, A}} is " << encrypted_data << std::endl;
 
