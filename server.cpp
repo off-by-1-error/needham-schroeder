@@ -288,7 +288,7 @@ void send(User* u) {
     system("rm data/tempcipher.txt");
     
     char enc_string[128];
-    sprintf(enc_string, "python des.py data/temp.txt data/tempcipher.txt %d 0", users[recipient_index]->key);
+    sprintf(enc_string, "python2 des.py data/temp.txt data/tempcipher.txt %d 0", users[recipient_index]->key);
 
     //std::cout << "enc_string: " << enc_string << std::endl;
     system(enc_string);
@@ -320,7 +320,7 @@ void send(User* u) {
 
     system("cat data/plaintext_envelope.txt data/tempcipher.txt > data/big_envelope.txt");
 
-    sprintf(enc_string, "python des.py data/big_envelope.txt data/encrypted_big_envelope.txt %d 0", u->key);
+    sprintf(enc_string, "python2 des.py data/big_envelope.txt data/encrypted_big_envelope.txt %d 0", u->key);
 
     system(enc_string);
 

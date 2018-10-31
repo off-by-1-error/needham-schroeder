@@ -105,7 +105,7 @@ def ns(master_key) :
     outfile.write(encrypted_data)
     outfile.close()
 
-    decryption_string = "python des.py client_outer_envelope.txt decrypted_outer_envelope.txt " + str(master_key) + " 1";
+    decryption_string = "python2 des.py client_outer_envelope.txt decrypted_outer_envelope.txt " + str(master_key) + " 1";
 
     print decryption_string
 
@@ -173,7 +173,7 @@ def ns(master_key) :
     outfile.write(message)
     outfile.close()
 
-    d_string = "python des.py bob_e_nonce.txt bob_p_nonce.txt " + r_session_key + " 1"
+    d_string = "python2 des.py bob_e_nonce.txt bob_p_nonce.txt " + r_session_key + " 1"
 
     os.system(d_string)
     os.system(d_string)
@@ -192,7 +192,7 @@ def ns(master_key) :
     outfile.write(f_nonce)
     outfile.close()
 
-    e_string = "python des.py plain_fnonce.txt cipher_fnonce.txt " + r_session_key + " 0"
+    e_string = "python2 des.py plain_fnonce.txt cipher_fnonce.txt " + r_session_key + " 0"
 
     os.system(e_string)
     os.system(e_string)
@@ -216,7 +216,7 @@ def ns(master_key) :
 
     news.send(filename)
 
-    e_string = "python des.py " + filename + " ctext.txt " + r_session_key + " 0"
+    e_string = "python2 des.py " + filename + " ctext.txt " + r_session_key + " 0"
 
     os.system(e_string)
     os.system(e_string)
@@ -288,7 +288,7 @@ def wait_for_transmission(master_key, port) :
     outfile.write(small_encrypted_envelope)
     outfile.close()
 
-    d_string = "python des.py small_encrypted_envelope.txt small_decrypted_envelope.txt " + str(master_key) + " 1"
+    d_string = "python2 des.py small_encrypted_envelope.txt small_decrypted_envelope.txt " + str(master_key) + " 1"
 
     os.system(d_string)
     os.system(d_string)
@@ -308,7 +308,7 @@ def wait_for_transmission(master_key, port) :
     outfile.write(str(nonce))
     outfile.close()
 
-    e_string = "python des.py plain_nonce.txt cipher_nonce.txt " + session_key + " 0"
+    e_string = "python2 des.py plain_nonce.txt cipher_nonce.txt " + session_key + " 0"
 
     os.system(e_string)
     os.system(e_string)
@@ -327,7 +327,7 @@ def wait_for_transmission(master_key, port) :
     outfile.write(fe_nonce)
     outfile.close()
 
-    d_string = "python des.py cf_nonce.txt pf_nonce.txt " + session_key + " 1"
+    d_string = "python2 des.py cf_nonce.txt pf_nonce.txt " + session_key + " 1"
 
     os.system(d_string)
     os.system(d_string)
@@ -361,7 +361,7 @@ def wait_for_transmission(master_key, port) :
     outfile.close()
 
 
-    d_string = "python des.py bctext.txt " + filename + "_ " + session_key + " 1"
+    d_string = "python2 des.py bctext.txt " + filename + "_ " + session_key + " 1"
 
     os.system(d_string)
     os.system(d_string)
